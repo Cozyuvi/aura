@@ -100,7 +100,7 @@ class DoctorAssessment {
   bool get hasImageRequest => needsImage && imageRequest.trim().isNotEmpty;
 
   static Map<String, dynamic>? _extractJsonObject(String text) {
-    final trimmed = text.trim();
+    final trimmed = _sanitizeAssistantText(text);
     if (trimmed.isEmpty) {
       return null;
     }
@@ -116,8 +116,27 @@ class DoctorAssessment {
       final decoded = jsonDecode(jsonText);
       return decoded is Map<String, dynamic> ? decoded : null;
     } catch (_) {
-      return null;
+      try {
+        final repairedJsonText = jsonText
+            .replaceAll(RegExp(r',\s*([}\]])'), r'$1')
+            .replaceAll(RegExp(r'\u2018|\u2019'), "'")
+            .replaceAll(RegExp(r'\u201c|\u201d'), '"');
+        final decoded = jsonDecode(repairedJsonText);
+        return decoded is Map<String, dynamic> ? decoded : null;
+      } catch (_) {
+        return null;
+      }
     }
+  }
+
+  static String _sanitizeAssistantText(String text) {
+    var cleaned = text.trim();
+    if (cleaned.startsWith('```')) {
+      cleaned = cleaned.replaceFirst(RegExp(r'^```(?:json)?\s*', caseSensitive: false), '');
+      cleaned = cleaned.replaceFirst(RegExp(r'\s*```\s*$', caseSensitive: false), '');
+    }
+    cleaned = cleaned.replaceAll(RegExp(r',\s*([}\]])'), r'$1');
+    return cleaned.trim();
   }
 
   static String? _readString(Map<String, dynamic> data, List<String> keys) {

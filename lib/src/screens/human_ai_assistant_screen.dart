@@ -337,42 +337,22 @@ Rules:
     setState(() {
       _isThinking = true;
       _status = 'Doctor is thinking...';
-      _lastAssistantText = '';
+      _lastAssistantText = 'Dr. Sophia is preparing a reply...';
     });
 
     _history.add(ChatMessage.user(userText));
     _trimHistory();
 
     try {
-      String response;
-      try {
-        final structuredPrompt = _buildStructuredDiagnosisPrompt(userText);
-        final streamBuffer = StringBuffer();
-        response = await _chatService.streamReply(
-          apiKey: _openRouterApiKey,
-          model: _openRouterModel,
-          messages: [
-            ..._history,
-            ChatMessage.user(structuredPrompt),
-          ],
-          onDelta: (delta) {
-            streamBuffer.write(delta);
-            if (!mounted) {
-              return;
-            }
-            setState(() {
-              _status = 'Doctor is responding...';
-              _lastAssistantText = streamBuffer.toString();
-            });
-          },
-        );
-      } catch (_) {
-        response = await _chatService.reply(
-          apiKey: _openRouterApiKey,
-          model: _openRouterModel,
-          messages: _history,
-        );
-      }
+      final structuredPrompt = _buildStructuredDiagnosisPrompt(userText);
+      final response = await _chatService.reply(
+        apiKey: _openRouterApiKey,
+        model: _openRouterModel,
+        messages: [
+          ..._history,
+          ChatMessage.user(structuredPrompt),
+        ],
+      );
 
       if (!mounted) {
         return;
@@ -399,7 +379,10 @@ Rules:
             : 'Dr. Sophia replied';
       });
 
-      unawaited(_speakAssistant(assessment.spokenResponse));
+        final speechText = assessment.spokenResponse.trim().isNotEmpty
+          ? assessment.spokenResponse
+          : assessment.diagnosisSummary;
+        unawaited(_speakAssistant(speechText));
     } catch (_) {
       if (!mounted) {
         return;
@@ -523,7 +506,10 @@ If the image does not clearly show the issue, ask for a better photo and name th
             : 'Image analyzed';
       });
 
-      unawaited(_speakAssistant(assessment.spokenResponse));
+        final speechText = assessment.spokenResponse.trim().isNotEmpty
+          ? assessment.spokenResponse
+          : assessment.diagnosisSummary;
+        unawaited(_speakAssistant(speechText));
     } catch (_) {
       if (!mounted) {
         return;
