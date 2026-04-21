@@ -1,15 +1,19 @@
 import 'package:flutter/material.dart';
 
+import 'models/auth_session.dart';
+import 'screens/client_dashboard_screen.dart';
 import 'screens/diagnosis_assessment_screen.dart';
 import 'screens/doctor_matching_screen.dart';
 import 'screens/doctors_screen.dart';
 import 'screens/home_dashboard_screen.dart';
 import 'screens/human_ai_assistant_screen.dart';
+import 'screens/login_screen.dart';
 import 'screens/live_consultation_screen.dart';
 import 'screens/medication_tracker_screen.dart';
 import 'screens/onboarding_flow_screen.dart';
-import 'screens/profile_records_screen.dart';
+import 'screens/register_screen.dart';
 import 'screens/visual_health_scan_screen.dart';
+import 'services/auth_service.dart';
 import 'theme/aura_theme.dart';
 import 'widgets/aura_ui.dart';
 
@@ -22,14 +26,25 @@ class AuraApp extends StatelessWidget {
       title: 'Aura Health Assistant',
       debugShowCheckedModeBanner: false,
       theme: AuraTheme.light(),
-      home: const AuraShell(),
+      home: ValueListenableBuilder<AuthSession?>(
+        valueListenable: AuthService.instance.sessionListenable,
+        builder: (context, session, _) {
+          if (session == null) {
+            return const LoginScreen();
+          }
+          return const AuraShell();
+        },
+      ),
       routes: {
+        '/login': (_) => const LoginScreen(),
+        '/register': (_) => const RegisterScreen(),
         '/onboarding': (_) => const OnboardingFlowScreen(),
         '/diagnosis': (_) => const DiagnosisAssessmentScreen(),
         '/live-consultation': (_) => const LiveConsultationScreen(),
         '/visual-scan': (_) => const VisualHealthScanScreen(),
         '/human-ai-assistant': (_) => const HumanAiAssistantScreen(),
         '/doctor-matching': (_) => const DoctorMatchingScreen(),
+        '/client-dashboard': (_) => const ClientDashboardScreen(),
       },
     );
   }
@@ -50,7 +65,7 @@ class _AuraShellState extends State<AuraShell> {
     HumanAiAssistantScreen(),
     DoctorsScreen(),
     MedicationTrackerScreen(),
-    ProfileRecordsScreen(),
+    ClientDashboardScreen(),
   ];
 
   @override

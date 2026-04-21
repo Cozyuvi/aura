@@ -54,3 +54,10 @@ app.*.map.json
 
 # Local Android SDK path
 /android/local.properties
+
+# Local secrets (never commit)
+/assets/secure/*.json
+/assets/secure/*.key
+/secrets/
+*.pem
+*service_account*.json
