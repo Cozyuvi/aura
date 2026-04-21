@@ -1,0 +1,214 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no" />
+  <title>Sophia Avatar</title>
+  <style>
+    html, body {
+      margin: 0;
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      background: radial-gradient(circle at top, #183331 0%, #0b1110 60%, #060909 100%);
+      font-family: Arial, sans-serif;
+    }
+
+    #stage {
+      position: fixed;
+      inset: 0;
+    }
+
+    #overlay {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      pointer-events: none;
+      color: rgba(255, 255, 255, 0.9);
+      text-align: center;
+      padding: 24px;
+    }
+
+    #panel {
+      background: rgba(255, 255, 255, 0.08);
+      border: 1px solid rgba(255, 255, 255, 0.14);
+      border-radius: 22px;
+      padding: 14px 18px;
+      backdrop-filter: blur(10px);
+      box-shadow: 0 16px 40px rgba(0, 0, 0, 0.35);
+      max-width: 80%;
+    }
+
+    #title {
+      font-size: 14px;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      opacity: 0.85;
+      margin-bottom: 8px;
+    }
+
+    #status {
+      font-size: 17px;
+      line-height: 1.4;
+      font-weight: 600;
+    }
+
+    #hint {
+      margin-top: 8px;
+      font-size: 12px;
+      opacity: 0.7;
+    }
+  </style>
+</head>
+<body>
+  <div id="stage"></div>
+  <div id="overlay">
+    <div id="panel">
+      <div id="title">Sophia</div>
+      <div id="status">Loading avatar...</div>
+      <div id="hint">If the model is loading, keep this screen open for a moment.</div>
+    </div>
+  </div>
+
+  <script type="module">
+    import * as THREE from './vendor/three.module.js';
+    import { FBXLoader } from './vendor/FBXLoader.js';
+
+    const container = document.getElementById('stage');
+    const statusNode = document.getElementById('status');
+    const hintNode = document.getElementById('hint');
+
+    const scene = new THREE.Scene();
+    scene.fog = new THREE.Fog(0x0b1110, 8, 18);
+
+    const camera = new THREE.PerspectiveCamera(35, window.innerWidth / window.innerHeight, 0.1, 1000);
+    camera.position.set(0, 1.65, 4.2);
+
+    const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+    renderer.setPixelRatio(window.devicePixelRatio || 1);
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    renderer.outputColorSpace = THREE.SRGBColorSpace;
+    renderer.setClearColor(0x000000, 0);
+    container.appendChild(renderer.domElement);
+
+    const ambient = new THREE.AmbientLight(0xffffff, 1.8);
+    scene.add(ambient);
+
+    const keyLight = new THREE.DirectionalLight(0x9bf7d0, 2.6);
+    keyLight.position.set(2, 5, 4);
+    scene.add(keyLight);
+
+    const fillLight = new THREE.DirectionalLight(0xffffff, 1.2);
+    fillLight.position.set(-3, 2, 3);
+    scene.add(fillLight);
+
+    const rimLight = new THREE.DirectionalLight(0x66d6b0, 1.0);
+    rimLight.position.set(0, 3, -4);
+    scene.add(rimLight);
+
+    const modelRoot = new THREE.Group();
+    scene.add(modelRoot);
+
+    let mixer = null;
+    const clock = new THREE.Clock();
+
+    function postAvatarStatus(message) {
+      if (window.flutter_inappwebview && window.flutter_inappwebview.callHandler) {
+        window.flutter_inappwebview.callHandler('avatarStatus', message);
+      }
+    }
+
+    function setStatus(message, hint) {
+      statusNode.textContent = message;
+      if (hint) {
+        hintNode.textContent = hint;
+      }
+      postAvatarStatus(message);
+    }
+
+    window.addEventListener('error', (event) => {
+      console.error('Avatar viewer error', event.error || event.message || event);
+      setStatus('Avatar failed to load', 'Viewer script error.');
+    });
+
+    window.addEventListener('unhandledrejection', (event) => {
+      console.error('Avatar viewer rejection', event.reason);
+      setStatus('Avatar failed to load', 'Viewer script error.');
+    });
+
+    setStatus('Loading avatar...', 'Initializing renderer.');
+
+    const loader = new FBXLoader();
+    const textureBaseUrl = new URL('tex/', window.location.href).href;
+    const textureFiles = new Set([
+      'rp_sophia_animated_003_dif.jpg',
+      'rp_sophia_animated_003_gloss.jpg',
+      'rp_sophia_animated_003_mask01.jpg',
+      'rp_sophia_animated_003_mask02.jpg',
+      'rp_sophia_animated_003_norm.jpg',
+    ]);
+    loader.setResourcePath(textureBaseUrl);
+    loader.manager.setURLModifier((url) => {
+      const normalized = url.replace(/\\/g, '/');
+      const stripped = normalized.split('?')[0].split('#')[0];
+      const fileName = stripped.split('/').pop()?.toLowerCase();
+      if (fileName && textureFiles.has(fileName)) {
+        return `${textureBaseUrl}${fileName}`;
+      }
+      return url;
+    });
+    const modelUrl = new URL('rp_sophia_animated_003_idling_ue4.fbx', window.location.href).href;
+    loader.load(
+      modelUrl,
+      (object) => {
+        object.scale.setScalar(0.0115);
+        object.position.set(0, -1.52, 0);
+        object.rotation.y = Math.PI;
+
+        modelRoot.add(object);
+
+        if (object.animations && object.animations.length > 0) {
+          mixer = new THREE.AnimationMixer(object);
+          const preferred = object.animations.find((clip) => {
+            const name = (clip.name || '').toLowerCase();
+            return name.includes('idle');
+          }) || object.animations[0];
+          mixer.clipAction(preferred).play();
+        }
+
+        setStatus('Avatar ready', 'Speak to Sophia and she will respond in real time.');
+      },
+      (event) => {
+        if (event && event.total) {
+          const percent = Math.round((event.loaded / event.total) * 100);
+          setStatus(`Loading avatar... ${percent}%`, 'Preparing Sophia.');
+        }
+      },
+      (error) => {
+        console.error('FBX load failed', error);
+        setStatus('Avatar failed to load', 'The FBX model could not be rendered.');
+      }
+    );
+
+    function animate() {
+      requestAnimationFrame(animate);
+      const delta = clock.getDelta();
+      if (mixer) {
+        mixer.update(delta);
+      }
+      modelRoot.rotation.y += delta * 0.35;
+      renderer.render(scene, camera);
+    }
+
+    animate();
+
+    window.addEventListener('resize', () => {
+      camera.aspect = window.innerWidth / window.innerHeight;
+      camera.updateProjectionMatrix();
+      renderer.setSize(window.innerWidth, window.innerHeight);
+    });
+  </script>
+</body>
+</html>
