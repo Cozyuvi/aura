@@ -145,6 +145,65 @@ class OpenRouterChatService {
     return result;
   }
 
+  Future<String> replyWithImage({
+    required String apiKey,
+    required String model,
+    required List<ChatMessage> messages,
+    required List<int> imageBytes,
+    required String imageMimeType,
+    required String prompt,
+  }) async {
+    final List<Map<String, dynamic>> requestMessages = messages
+        .map((message) => <String, dynamic>{
+              'role': message.role,
+              'content': message.content,
+            })
+        .toList();
+    requestMessages.add({
+      'role': 'user',
+      'content': [
+        {
+          'type': 'text',
+          'text': prompt,
+        },
+        {
+          'type': 'image_url',
+          'image_url': {
+            'url': 'data:$imageMimeType;base64,${base64Encode(imageBytes)}',
+          },
+        },
+      ],
+    });
+
+    final response = await _client.post(
+      Uri.parse(_endpoint),
+      headers: _headers(apiKey),
+      body: jsonEncode({
+        'model': model,
+        'messages': requestMessages,
+        'temperature': 0.3,
+        'max_tokens': 500,
+      }),
+    );
+
+    if (response.statusCode < 200 || response.statusCode >= 300) {
+      throw Exception('OpenRouter image error ${response.statusCode}: ${response.body}');
+    }
+
+    final data = jsonDecode(response.body) as Map<String, dynamic>;
+    final choices = data['choices'];
+    if (choices is List && choices.isNotEmpty) {
+      final choice = choices.first as Map<String, dynamic>;
+      final message = choice['message'] as Map<String, dynamic>?;
+      final content = message?['content'];
+      if (content is String && content.trim().isNotEmpty) {
+        return content.trim();
+      }
+    }
+
+    throw Exception('Empty image response from OpenRouter');
+  }
+
   void dispose() {
     _client.close();
   }

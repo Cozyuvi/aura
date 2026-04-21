@@ -28,6 +28,10 @@
 	<true/>
 	<key>NSMicrophoneUsageDescription</key>
 	<string>Aura uses your microphone for real-time voice conversations with the AI assistant.</string>
+	<key>NSCameraUsageDescription</key>
+	<string>Aura uses your camera to capture body-part images when the doctor assistant asks for them.</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>Aura uses your photo library to attach body-part images to the doctor assistant.</string>
 	<key>io.flutter.embedded_views_preview</key>
 	<true/>
 	<key>UIApplicationSceneManifest</key>

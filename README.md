@@ -1,17 +1,32 @@
-# aura
+# Aura
 
-A new Flutter project.
+Aura is a voice-first telehealth assistant built with Flutter. It supports live doctor-style conversation, on-demand body-part image capture, and structured diagnosis storage in MongoDB through the backend service.
 
-## Getting Started
+## Backend
 
-This project is a starting point for a Flutter application.
+The Node backend lives in [backend/server.js](backend/server.js) and uses these environment variables:
 
-A few resources to get you started if this is your first Flutter project:
+- `MONGODB_URI`: MongoDB connection string
+- `MONGODB_DB`: optional database name
+- `PORT`: backend port, defaults to `3000`
 
-- [Learn Flutter](https://docs.flutter.dev/get-started/learn-flutter)
-- [Write your first Flutter app](https://docs.flutter.dev/get-started/codelab)
-- [Flutter learning resources](https://docs.flutter.dev/reference/learning-resources)
+Copy [backend/.env.example](backend/.env.example) to `backend/.env`, fill in the values, then run:
 
-For help getting started with Flutter development, view the
-[online documentation](https://docs.flutter.dev/), which offers tutorials,
-samples, guidance on mobile development, and a full API reference.
+```bash
+cd backend
+npm install
+npm start
+```
+
+## Flutter App
+
+The app stores diagnosis records through `AURA_BACKEND_URL`. If that is not set, it falls back to a local backend URL on desktop and emulator targets.
+
+Typical workflow:
+
+```bash
+flutter pub get
+flutter run
+```
+
+If the consultation needs visual context, the assistant will request a body-part image and then refine the diagnosis using that image.
